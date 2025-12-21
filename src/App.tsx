@@ -18,7 +18,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import type { MouseEvent, RefObject, SVGProps } from "react";
+import type { MouseEvent, RefObject } from "react";
 
 function AutoFocusDemo() {
   return (
@@ -269,11 +269,9 @@ function PartDemo() {
   useEffect(() => {
     const ensurePartHost = (
       ref: RefObject<HTMLDivElement | null>,
-      id: string,
       inner: string
     ) => {
       if (!ref.current) return;
-      ref.current.id = id;
       const shadow =
         ref.current.shadowRoot ?? ref.current.attachShadow({ mode: "open" });
       if (!shadow.firstChild) {
@@ -283,10 +281,9 @@ function PartDemo() {
 
     ensurePartHost(
       partSvgHostRef,
-      "part-svg-host",
       `
         <style>
-          /* defalult style */
+          /* default style */
             .container {
               width: 160px;
               height: 160px;
@@ -305,10 +302,9 @@ function PartDemo() {
 
     ensurePartHost(
       partDivHostRef,
-      "part-div-host",
       `
         <style>
-          /* defalult style */
+          /* default style */
             .container {
               width: 160px;
               height: 160px;
@@ -339,9 +335,12 @@ function PartDemo() {
       <h2>part</h2>
       <p>
         <code>part</code> exposes shadow children for external styling via{" "}
-        <code>::part</code>. Shadow content starts neutral (white with red dot).
-        Toggle the style below to see that only <code>::part</code> styling can
-        recolor the shadow content (works for both SVG and div parts).
+        <code>::part</code>. Shadow content has a default style (white container
+        with a red dot). By default, <code>::part</code> styling is enabled
+        (purple background + green dot). Toggle the button below to disable{" "}
+        <code>::part</code> styling and see the default style. This confirms
+        that only <code>::part</code> selectors can override shadow content
+        styles (works for both SVG and div parts).
       </p>
       <button onClick={() => setPartStyleEnabled((v) => !v)}>
         {partStyleEnabled ? "Disable ::part styling" : "Enable ::part styling"}
@@ -380,61 +379,94 @@ function PartDemo() {
 function SlotDemo() {
   const slotSvgHostRef = useRef<HTMLDivElement>(null);
   const slotDivHostRef = useRef<HTMLDivElement>(null);
+  const [slotOverride, setSlotOverride] = useState(true);
 
   useEffect(() => {
-    const ensureSlotHost = (
-      ref: RefObject<HTMLDivElement | null>,
-      id: string
-    ) => {
+    const ensureSlotHost = (ref: RefObject<HTMLDivElement | null>) => {
       if (!ref.current) return;
-      ref.current.id = id;
       const shadow =
         ref.current.shadowRoot ?? ref.current.attachShadow({ mode: "open" });
       if (!shadow.firstChild) {
         shadow.innerHTML = `
           <style>
-            slot[name="demo-slot"]::slotted(*) {
-              outline: 2px solid rebeccapurple;
+          /* default style */
+            .container {
+              width: 160px;
+              height: 160px;
+              border: 1px solid #ccc;
+              background: #fff;
+              display: flex;
+              justify-content: center;
+              align-items: center;
             }
-          </style>
-          <slot name="demo-slot"></slot>
+
+            .dot {
+              display: inline-block;
+              width: 120px;
+              height: 120px;
+              border-radius: 50%;
+              background: red;
+            }
+        </style>
+          <slot name="container-slot">
+            <div class="container">
+              <span class="dot"></span>
+            </div>
+          </slot>
         `;
       }
     };
 
-    ensureSlotHost(slotSvgHostRef, "slot-svg-host");
-    ensureSlotHost(slotDivHostRef, "slot-div-host");
+    ensureSlotHost(slotSvgHostRef);
+    ensureSlotHost(slotDivHostRef);
   }, []);
 
   return (
     <>
       <h2>slot</h2>
       <p>
-        Slotted content can be styled from the shadow root via{" "}
-        <code>::slotted</code>. Hosts are neutral containers; the light DOM
-        provides the slotted nodes (SVG vs div) in rebeccapurple.
+        This demo confirms that SVG can be provided to a slot, just like div.
+        Hosts contain a shadow with a named slot (
+        <code>slot="container-slot"</code>
+        ). By default, light DOM supplies slotted nodes (purple SVG/div with
+        green dot). Toggle the button below to remove slotted content and fall
+        back to the shadow's default content (white container with a red dot).
+        This demonstrates that SVG works as slotted content alongside div.
       </p>
+      <button onClick={() => setSlotOverride((v) => !v)}>
+        {slotOverride
+          ? "Use fallback slot content"
+          : "Override with slotted nodes"}
+      </button>
       <div className="row">
         <p>svg slotted</p>
         <div ref={slotSvgHostRef} className="container">
-          <svg
-            {...({ slot: "demo-slot" } as SVGProps<SVGSVGElement>)}
-            width={160}
-            height={160}
-            className="container"
-            aria-label="slotted svg"
-          >
-            <circle cx={80} cy={80} r={60} fill="rebeccapurple" />
-          </svg>
+          {slotOverride && (
+            <svg
+              /* @ts-expect-error add slot to SVG attributes */
+              slot="container-slot"
+              className="container"
+              style={{ backgroundColor: "rebeccapurple" }}
+            >
+              <circle cx={80} cy={80} r={60} fill="mediumseagreen" />
+            </svg>
+          )}
         </div>
 
         <p>div slotted</p>
         <div ref={slotDivHostRef} className="container">
-          <div
-            slot="demo-slot"
-            className="dot dot-purple"
-            aria-label="slotted div"
-          />
+          {slotOverride && (
+            <div
+              slot="container-slot"
+              className="container"
+              style={{ backgroundColor: "rebeccapurple" }}
+            >
+              <span
+                className="dot"
+                style={{ backgroundColor: "mediumseagreen" }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -477,7 +509,6 @@ function App() {
              border-radius: 50%;
              background: red;
            }
-
          `}
       </style>
       <h1>SVG attribute demo (autoFocus / nonce / part / slot)</h1>
@@ -485,49 +516,6 @@ function App() {
       <NonceDemo />
       <PartDemo />
       <SlotDemo />
-
-      {/* TODO: */}
-      {/* <h4 style={{ marginTop: 24 }}>nonce</h4>
-      <div className="row">
-        <svg
-          ref={svgNonceRef}
-          // @ts-expect-error add nonce to SVG
-          nonce={"demo-nonce"}
-          width={160}
-          height={160}
-          className="container"
-        >
-          <circle cx={80} cy={80} r={60} fill="red" />
-        </svg>
-        <div nonce="demo-nonce" className="container">
-          <span className="dot" />
-        </div>
-      </div>
-      <h4 style={{ marginTop: 24 }}>part (shadow host exposes part)</h4>
-      <div className="row">
-        <div ref={partHostRef} />
-        <div className="container">
-          <span className="dot" />
-        </div>
-      </div>
-      <h4 style={{ marginTop: 24 }}>
-        slot demo (slotted SVG styled via ::slotted)
-      </h4>
-      <div className="row">
-        <div ref={slotHostRef}>
-          <svg
-            {...({ slot: "demo-slot" } as React.SVGProps<SVGSVGElement>)}
-            width={160}
-            height={160}
-            className="focusable card-svg"
-          >
-            <circle cx={80} cy={80} r={60} fill="rebeccapurple" />
-          </svg>
-        </div>
-        <div className="container">
-          <span className="dot" />
-        </div>
-      </div> */}
     </div>
   );
 }
