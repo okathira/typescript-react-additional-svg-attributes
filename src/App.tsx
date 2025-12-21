@@ -17,9 +17,10 @@
  * - slot: slotted SVG is styled via ::slotted and logs assignedSlot info.
  */
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import type { MouseEvent, RefObject, SVGProps } from "react";
 
-function AutoFocus() {
+function AutoFocusDemo() {
   return (
     <>
       <h2>autoFocus</h2>
@@ -157,12 +158,7 @@ function AutoFocusInDialog() {
           open dialog (button)
         </button>
         {/* dialogs */}
-        <dialog
-          ref={svgDialogRef}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) e.currentTarget.close();
-          }}
-        >
+        <dialog ref={svgDialogRef} closedby="any">
           <p>SVG dialog (check focus on open)</p>
           <button onClick={() => svgDialogRef.current?.close()}>Close</button>
           <svg
@@ -178,12 +174,7 @@ function AutoFocusInDialog() {
             <circle cx={80} cy={80} r={60} fill="red" />
           </svg>
         </dialog>
-        <dialog
-          ref={divDialogRef}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) e.currentTarget.close();
-          }}
-        >
+        <dialog ref={divDialogRef} closedby="any">
           <p>Div dialog (check focus on open)</p>
           <button onClick={() => divDialogRef.current?.close()}>Close</button>
           <div
@@ -196,12 +187,7 @@ function AutoFocusInDialog() {
             <span className="dot" />
           </div>
         </dialog>
-        <dialog
-          ref={buttonDialogRef}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) e.currentTarget.close();
-          }}
-        >
+        <dialog ref={buttonDialogRef} closedby="any">
           <p>Button dialog (check focus on open)</p>
           <button onClick={() => buttonDialogRef.current?.close()}>
             Close
@@ -217,6 +203,210 @@ function AutoFocusInDialog() {
             Focusable Button
           </button>
         </dialog>
+      </div>
+    </>
+  );
+}
+
+function NonceDemo() {
+  const handleClick = (e: MouseEvent<SVGSVGElement | HTMLDivElement>) => {
+    console.log(
+      "nonce:",
+      e.currentTarget.getAttribute("nonce"),
+      // nonce is valid property
+      e.currentTarget.nonce
+    );
+    console.log(
+      "asdf (meaningless attribute):",
+      e.currentTarget.getAttribute("asdf"),
+      // @ts-expect-error asdf is undefined
+      e.currentTarget.asdf
+    );
+  };
+
+  return (
+    <>
+      <h2>nonce</h2>
+      <p>
+        It is a global attribute, so both HTML and SVG accept it, though some
+        browsers may hide the value when read via <code>getAttribute</code>.
+        Click the SVG or the div below to log both the <code>nonce</code>{" "}
+        attribute (via <code>getAttribute</code>) and the <code>nonce</code>{" "}
+        property. The logs also include a meaningless attribute{" "}
+        <code>asdf</code> to show how unknown attributes behave.
+      </p>
+      <div className="row">
+        <p>svg</p>
+        <svg
+          // @ts-expect-error add nonce to SVG attributes
+          nonce="sample-nonce-svg"
+          // meaningless attribute sample for testing
+          asdf="asdf"
+          width={160}
+          height={160}
+          className="container"
+          onClick={handleClick}
+        >
+          <circle cx={80} cy={80} r={60} fill="red" />
+        </svg>
+
+        <p>div</p>
+        <div
+          nonce="sample-nonce-div"
+          // @ts-expect-error meaningless attribute sample for testing
+          asdf="asdf"
+          className="container"
+          onClick={handleClick}
+        >
+          <span className="dot" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function PartDemo() {
+  const partSvgHostRef = useRef<HTMLDivElement>(null);
+  const partDivHostRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ensurePartHost = (
+      ref: RefObject<HTMLDivElement | null>,
+      id: string,
+      inner: string
+    ) => {
+      if (!ref.current) return;
+      ref.current.id = id;
+      const shadow =
+        ref.current.shadowRoot ?? ref.current.attachShadow({ mode: "open" });
+      if (!shadow.firstChild) {
+        shadow.innerHTML = inner;
+      }
+    };
+
+    ensurePartHost(
+      partSvgHostRef,
+      "part-svg-host",
+      `
+        <style>
+          .part-shape {
+            width: 160px;
+            height: 160px;
+          }
+        </style>
+        <svg part="demo-part" class="part-shape" viewBox="0 0 160 160" aria-label="svg part">
+          <circle cx="80" cy="80" r="60" fill="white"></circle>
+        </svg>
+      `
+    );
+
+    ensurePartHost(
+      partDivHostRef,
+      "part-div-host",
+      `
+        <style>
+          .part-dot {
+            display: inline-block;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: white;
+          }
+        </style>
+        <div part="demo-part" class="part-dot" aria-label="div part"></div>
+      `
+    );
+
+    const styleId = "part-demo-style";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        #part-svg-host::part(demo-part) { outline: 2px solid rebeccapurple; border-radius: 4px; fill: rebeccapurple; }
+        #part-div-host::part(demo-part) { outline: 2px solid rebeccapurple; border-radius: 4px; background: rebeccapurple; }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  return (
+    <>
+      <h2>part</h2>
+      <p>
+        <code>part</code> exposes a shadow element for external styling via
+        <code>::part</code>. Here the shadow content is neutral (white) and the
+        light DOM applies <code>::part(demo-part)</code> to paint
+        rebeccapurple/outline from outside the host.
+      </p>
+      <div className="row">
+        <p>svg host</p>
+        <div ref={partSvgHostRef} className="container" />
+        <p>div host</p>
+        <div ref={partDivHostRef} className="container" />
+      </div>
+    </>
+  );
+}
+
+function SlotDemo() {
+  const slotSvgHostRef = useRef<HTMLDivElement>(null);
+  const slotDivHostRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ensureSlotHost = (
+      ref: RefObject<HTMLDivElement | null>,
+      id: string
+    ) => {
+      if (!ref.current) return;
+      ref.current.id = id;
+      const shadow =
+        ref.current.shadowRoot ?? ref.current.attachShadow({ mode: "open" });
+      if (!shadow.firstChild) {
+        shadow.innerHTML = `
+          <style>
+            slot[name="demo-slot"]::slotted(*) {
+              outline: 2px solid rebeccapurple;
+            }
+          </style>
+          <slot name="demo-slot"></slot>
+        `;
+      }
+    };
+
+    ensureSlotHost(slotSvgHostRef, "slot-svg-host");
+    ensureSlotHost(slotDivHostRef, "slot-div-host");
+  }, []);
+
+  return (
+    <>
+      <h2>slot</h2>
+      <p>
+        Slotted content can be styled from the shadow root via{" "}
+        <code>::slotted</code>. Hosts are neutral containers; the light DOM
+        provides the slotted nodes (SVG vs div) in rebeccapurple.
+      </p>
+      <div className="row">
+        <p>svg slotted</p>
+        <div ref={slotSvgHostRef} className="container">
+          <svg
+            {...({ slot: "demo-slot" } as SVGProps<SVGSVGElement>)}
+            width={160}
+            height={160}
+            className="container"
+            aria-label="slotted svg"
+          >
+            <circle cx={80} cy={80} r={60} fill="rebeccapurple" />
+          </svg>
+        </div>
+
+        <p>div slotted</p>
+        <div ref={slotDivHostRef} className="container">
+          <div
+            slot="demo-slot"
+            className="dot dot-purple"
+            aria-label="slotted div"
+          />
+        </div>
       </div>
     </>
   );
@@ -258,11 +448,16 @@ function App() {
              border-radius: 50%;
              background: red;
            }
+           .dot-green { background: mediumseagreen; }
+           .dot-purple { background: rebeccapurple; }
 
          `}
       </style>
       <h1>SVG attribute demo (autoFocus / nonce / part / slot)</h1>
-      <AutoFocus />
+      <AutoFocusDemo />
+      <NonceDemo />
+      <PartDemo />
+      <SlotDemo />
 
       {/* TODO: */}
       {/* <h4 style={{ marginTop: 24 }}>nonce</h4>
