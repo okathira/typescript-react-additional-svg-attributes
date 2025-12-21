@@ -1,20 +1,23 @@
 /**
- * Demo to verify SVG attributes added to SVGAttributes<T>:
- * - autoFocus (with tabIndex=0 so focus can be taken)
+ * Demo to verify SVG attributes considered for addition to SVGAttributes<T>:
+ * - autoFocus (with tabIndex so focus can be taken)
  * - nonce
  * - part
  * - slot
  *
  * Why prefix is excluded:
- * - In HTMLAttributes, `prefix` is the RDFa attribute. SVGAttributes currently
- *   does not declare that RDFa attribute. The script matched Element.prefix,
- *   a different read-only DOM property, so I leave `prefix` out for SVG.
+ * - In HTMLAttributes, `prefix` refers to the RDFa attribute. SVGAttributes does not
+ *   currently declare this RDFa attribute. The script matched Element.prefix, which is
+ *   a different read-only DOM property, so `prefix` is excluded from SVG additions.
  *
- * What this demo checks:
- * - autoFocus: focus behavior on mount/open (native `autofocus` vs React `autoFocus`).
- * - nonce: property and attribute are logged (note some browsers hide the attribute).
- * - part: host exposes an SVG part; styled via ::part to prove it works.
- * - slot: slotted SVG is styled via ::slotted and logs assignedSlot info.
+ * What this demo demonstrates:
+ * - autoFocus: Confirms React does not support `autoFocus` on non-form controls (SVG/div),
+ *   though the native `autofocus` attribute works. Conclusion: not added to SVGAttributes.
+ * - nonce: Logs both the `nonce` attribute (via `getAttribute`) and property to show
+ *   they work on SVG elements. Some browsers may hide the attribute for security.
+ * - part: Shows that `::part` selectors can style shadow content exposed via `part`
+ *   attributes on SVG elements (works the same as div).
+ * - slot: Confirms SVG elements can be provided to named slots, just like div elements.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -23,7 +26,7 @@ import type { MouseEvent, RefObject } from "react";
 function AutoFocusDemo() {
   return (
     <>
-      <h2>autoFocus</h2>
+      <h2 id="autofocus">autoFocus</h2>
       <p>
         Note on <code>autoFocus</code>: The native <code>autofocus</code>{" "}
         attribute was originally form controls only, but now applies to HTML and
@@ -67,10 +70,10 @@ function AutoFocusDemo() {
 function AutoFocusBasic() {
   return (
     <>
-      <h3>autoFocus (svg, div, button)</h3>
+      <h3 id="autofocus-basic">autoFocus (svg, div, button)</h3>
       <p>
-        To inspect actual behavior, try toggling/commenting{" "}
-        <code>autoFocus</code> / <code>autofocus</code>.
+        Toggle or comment out <code>autoFocus</code> and <code>autofocus</code>{" "}
+        attributes in the code to inspect how each element behaves on mount.
       </p>
       <div className="row">
         <p>svg</p>
@@ -118,18 +121,15 @@ function AutoFocusInDialog() {
 
   return (
     <>
-      <h3>autoFocus in dialog (svg, div, button)</h3>
+      <h3 id="autofocus-dialog">autoFocus in dialog (svg, div, button)</h3>
       <p>
-        To inspect actual browser behavior, use the buttons below to open each
-        dialog and watch which element receives focus.
-      </p>
-      <p>
-        Note on <code>autoFocus</code> in dialog: React doesn't wire{" "}
-        <code>autoFocus</code> for dialog contents (
+        Use the buttons below to open each dialog and observe which element
+        receives focus. React doesn't wire <code>autoFocus</code> for dialog
+        contents (
         <a href="https://github.com/facebook/react/issues/23301">
           facebook/react #23301
         </a>
-        ), so these samples rely on the native <code>autofocus</code> attribute
+        ), so these samples use the native <code>autofocus</code> attribute
         instead.
       </p>
       <div className="row">
@@ -207,28 +207,28 @@ function AutoFocusInDialog() {
 function NonceDemo() {
   const handleClick = (e: MouseEvent<SVGSVGElement | HTMLDivElement>) => {
     console.log(
-      "nonce:",
-      e.currentTarget.getAttribute("nonce"),
-      // nonce is valid property
-      e.currentTarget.nonce
+      `nonce attribute: ${e.currentTarget.getAttribute("nonce")}, property: ${
+        // nonce is a valid property
+        e.currentTarget.nonce
+      }`
     );
     console.log(
-      "asdf (meaningless attribute):",
-      e.currentTarget.getAttribute("asdf"),
-      // @ts-expect-error asdf is undefined
-      e.currentTarget.asdf
+      `asdf attribute: ${e.currentTarget.getAttribute("asdf")}, property: ${
+        // @ts-expect-error asdf is undefined
+        e.currentTarget.asdf
+      }`
     );
   };
 
   return (
     <>
-      <h2>nonce</h2>
+      <h2 id="nonce">nonce</h2>
       <p>
-        It is a global attribute, so both HTML and SVG accept it, though some
-        browsers may hide the value when read via <code>getAttribute</code>.
-        Click the SVG or the div below to log both the <code>nonce</code>{" "}
+        <code>nonce</code> is a global attribute, so both HTML and SVG elements
+        accept it. Click the SVG or div below to log both the <code>nonce</code>{" "}
         attribute (via <code>getAttribute</code>) and the <code>nonce</code>{" "}
-        property. The logs also include a meaningless attribute{" "}
+        property. Note that some browsers may hide the attribute value for
+        security reasons. The logs also include a meaningless attribute{" "}
         <code>asdf</code> to show how unknown attributes behave.
       </p>
       <div className="row">
@@ -332,7 +332,7 @@ function PartDemo() {
 
   return (
     <>
-      <h2>part</h2>
+      <h2 id="part">part</h2>
       <p>
         <code>part</code> exposes shadow children for external styling via{" "}
         <code>::part</code>. Shadow content has a default style (white container
@@ -423,15 +423,14 @@ function SlotDemo() {
 
   return (
     <>
-      <h2>slot</h2>
+      <h2 id="slot">slot</h2>
       <p>
-        This demo confirms that SVG can be provided to a slot, just like div.
-        Hosts contain a shadow with a named slot (
-        <code>slot="container-slot"</code>
+        This demo shows that SVG can be provided to a slot, just like div. Hosts
+        contain a shadow with a named slot (<code>slot="container-slot"</code>
         ). By default, light DOM supplies slotted nodes (purple SVG/div with
         green dot). Toggle the button below to remove slotted content and fall
         back to the shadow's default content (white container with a red dot).
-        This demonstrates that SVG works as slotted content alongside div.
+        This confirms that SVG works as slotted content alongside div.
       </p>
       <button onClick={() => setSlotOverride((v) => !v)}>
         {slotOverride
@@ -439,7 +438,7 @@ function SlotDemo() {
           : "Override with slotted nodes"}
       </button>
       <div className="row">
-        <p>svg slotted</p>
+        <p>svg</p>
         <div ref={slotSvgHostRef} className="container">
           {slotOverride && (
             <svg
@@ -453,7 +452,7 @@ function SlotDemo() {
           )}
         </div>
 
-        <p>div slotted</p>
+        <p>div</p>
         <div ref={slotDivHostRef} className="container">
           {slotOverride && (
             <div
@@ -511,7 +510,9 @@ function App() {
            }
          `}
       </style>
-      <h1>SVG attribute demo (autoFocus / nonce / part / slot)</h1>
+      <h1 id="svg-attribute-demo">
+        SVG attribute demo (autoFocus / nonce / part / slot)
+      </h1>
       <AutoFocusDemo />
       <NonceDemo />
       <PartDemo />
