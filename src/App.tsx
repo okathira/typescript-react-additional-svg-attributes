@@ -17,7 +17,7 @@
  * - slot: slotted SVG is styled via ::slotted and logs assignedSlot info.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MouseEvent, RefObject, SVGProps } from "react";
 
 function AutoFocusDemo() {
@@ -79,8 +79,6 @@ function AutoFocusBasic() {
           // @ts-expect-error React doesn't support `autoFocus` for non form controls (https://github.com/facebook/react/issues/6868)
           autoFocus // does not work
           {...{ autofocus: "true" }} // works
-          width={160}
-          height={160}
           className="container"
           onFocus={() => console.log("svg onFocus")}
         >
@@ -166,8 +164,6 @@ function AutoFocusInDialog() {
             // @ts-expect-error React doesn't support `autoFocus` in dialog (https://github.com/facebook/react/issues/23301)
             autoFocus // does not work
             {...{ autofocus: "true" }} // works
-            width={160}
-            height={160}
             className="container"
             onFocus={() => console.log("svg onFocus")}
           >
@@ -268,6 +264,7 @@ function NonceDemo() {
 function PartDemo() {
   const partSvgHostRef = useRef<HTMLDivElement>(null);
   const partDivHostRef = useRef<HTMLDivElement>(null);
+  const [partStyleEnabled, setPartStyleEnabled] = useState(true);
 
   useEffect(() => {
     const ensurePartHost = (
@@ -289,13 +286,19 @@ function PartDemo() {
       "part-svg-host",
       `
         <style>
-          .part-shape {
-            width: 160px;
-            height: 160px;
-          }
+          /* defalult style */
+            .container {
+              width: 160px;
+              height: 160px;
+              border: 1px solid #ccc;
+              background: #fff;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
         </style>
-        <svg part="demo-part" class="part-shape" viewBox="0 0 160 160" aria-label="svg part">
-          <circle cx="80" cy="80" r="60" fill="white"></circle>
+        <svg part="background-part" class="container">
+          <circle part="dot-part" cx="80" cy="80" r="60" fill="red"/>
         </svg>
       `
     );
@@ -305,44 +308,70 @@ function PartDemo() {
       "part-div-host",
       `
         <style>
-          .part-dot {
-            display: inline-block;
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: white;
-          }
+          /* defalult style */
+            .container {
+              width: 160px;
+              height: 160px;
+              border: 1px solid #ccc;
+              background: #fff;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+
+            .dot {
+              display: inline-block;
+              width: 120px;
+              height: 120px;
+              border-radius: 50%;
+              background: red;
+            }
         </style>
-        <div part="demo-part" class="part-dot" aria-label="div part"></div>
+        <div part="background-part" class="container">
+          <span part="dot-part" class="dot"></span>
+        </div>
       `
     );
-
-    const styleId = "part-demo-style";
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement("style");
-      style.id = styleId;
-      style.textContent = `
-        #part-svg-host::part(demo-part) { outline: 2px solid rebeccapurple; border-radius: 4px; fill: rebeccapurple; }
-        #part-div-host::part(demo-part) { outline: 2px solid rebeccapurple; border-radius: 4px; background: rebeccapurple; }
-      `;
-      document.head.appendChild(style);
-    }
   }, []);
 
   return (
     <>
       <h2>part</h2>
       <p>
-        <code>part</code> exposes a shadow element for external styling via
-        <code>::part</code>. Here the shadow content is neutral (white) and the
-        light DOM applies <code>::part(demo-part)</code> to paint
-        rebeccapurple/outline from outside the host.
+        <code>part</code> exposes shadow children for external styling via{" "}
+        <code>::part</code>. Shadow content starts neutral (white with red dot).
+        Toggle the style below to see that only <code>::part</code> styling can
+        recolor the shadow content (works for both SVG and div parts).
       </p>
+      <button onClick={() => setPartStyleEnabled((v) => !v)}>
+        {partStyleEnabled ? "Disable ::part styling" : "Enable ::part styling"}
+      </button>
+      {partStyleEnabled && (
+        <style>
+          {`
+            .part-host::part(background-part) {
+              background-color: rebeccapurple;
+            }
+
+            .part-host.svg-host::part(dot-part) {
+              fill: mediumseagreen;
+            }
+            .part-host.div-host::part(dot-part) {
+              background-color: mediumseagreen;
+            }
+
+            /* without a ::part selector, style does not affect */
+            .part-host .container {
+              background-color: yellow;
+            }
+          `}
+        </style>
+      )}
       <div className="row">
-        <p>svg host</p>
-        <div ref={partSvgHostRef} className="container" />
-        <p>div host</p>
-        <div ref={partDivHostRef} className="container" />
+        <p>svg</p>
+        <div ref={partSvgHostRef} className="part-host svg-host" />
+        <p>div</p>
+        <div ref={partDivHostRef} className="part-host div-host" />
       </div>
     </>
   );
@@ -448,8 +477,6 @@ function App() {
              border-radius: 50%;
              background: red;
            }
-           .dot-green { background: mediumseagreen; }
-           .dot-purple { background: rebeccapurple; }
 
          `}
       </style>
