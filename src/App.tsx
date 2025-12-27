@@ -224,12 +224,13 @@ function NonceDemo() {
     <>
       <h2 id="nonce">nonce</h2>
       <p>
-        <code>nonce</code> is a global attribute, so both HTML and SVG elements
-        accept it. Click the SVG or div below to log both the <code>nonce</code>{" "}
-        attribute (via <code>getAttribute</code>) and the <code>nonce</code>{" "}
-        property. Note that some browsers may hide the attribute value for
-        security reasons. The logs also include a meaningless attribute{" "}
-        <code>asdf</code> to show how unknown attributes behave.
+        <code>nonce</code> is defined on both <code>HTMLElement</code> and{" "}
+        <code>SVGElement</code>, so both HTML and SVG elements accept it. Click
+        the SVG or div below to log both the <code>nonce</code> attribute (via{" "}
+        <code>getAttribute</code>) and the <code>nonce</code> property. Note
+        that some browsers may hide the attribute value for security reasons.
+        The logs also include a meaningless attribute <code>asdf</code> to show
+        how unknown attributes behave.
       </p>
       <div className="row">
         <p>svg</p>
